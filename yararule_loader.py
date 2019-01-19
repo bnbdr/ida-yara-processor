@@ -131,6 +131,7 @@ def parse_data_seg(hdr, file_hdr, f):
     MakeName(file_hdr.ac_match_table, 'ac_match_table')
 
     print 'set struct hdr:', set_ea_to_struc(0, structs.YARA_RULES_FILE_HEADER)
+    MakeName(0, 'file_header')
 
     rule_size = GetStrucSize(structs.YR_RULE)
     f.seek(file_hdr.rules_list_head+0x0c)
