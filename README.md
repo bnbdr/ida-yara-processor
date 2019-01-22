@@ -20,6 +20,7 @@ put the file loader in:
 - IDA 7.0
 
 ## Tested Versions
+- YARA 3.7.0
 - YARA 3.8.1
 
 

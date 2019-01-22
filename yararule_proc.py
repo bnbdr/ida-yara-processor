@@ -5,6 +5,7 @@ import idautils
 YARA_OPERAND_SIZE = 8
 YARA_RELOCATION_NULL_MAGIC = 0xfffaBADA
 YARA_RELOCATION_END_MAGIC = 0xffffFFFF
+UNDEFINED_MAGIC = 0xFFFABADAFABADAFF
 
 
 def read_qw(self, insn, eaoffset):
@@ -211,7 +212,7 @@ class YaraProc(processor_t):
 
         if op.type == o_mem:
             dreftype = dr_R
-            if op.dtyp == dt_string:
+            if op.dtyp == dt_string and op.addr != 0:
                 dreftype = dr_T
                 make_ascii_string(op.addr, 0, ASCSTR_C)
 
@@ -219,9 +220,15 @@ class YaraProc(processor_t):
 
         elif op.type == o_near:
 
-            n = '@_{}'.format(op.addr if get_word(op.addr) != 0xfffe else 'exit')  
+            n = '@_{}'.format(op.addr if get_word(
+                op.addr) != 0xfffe else 'exit')
             MakeNameEx(op.addr, n, SN_AUTO)
             add_cref(insn.ea, op.addr, fl_JN)
+
+        elif op.type == o_imm:
+            if op.value == UNDEFINED_MAGIC or op.value == UNDEFINED_MAGIC & 0xFFFFffff:
+                # OpEnum(insn.ea, op.n, GetConstByName('YARA_CONST'))
+                pass  # TODO: figure out how to show it
 
     def notify_emu(self, insn):
         feature = insn.get_canon_feature()
@@ -245,8 +252,8 @@ class YaraProc(processor_t):
             return True
 
         if op.type == o_imm:
-            # this way it won't make it big endian, TODO: figure out why immediates are displayed in big endin
-            ctx.out_value(op, OOF_ADDR)
+            # TODO: check for UNDEFINED value
+            ctx.out_value(op, OOFW_64)  # vm operands are always qwords
             return True
 
         if op.type == o_mem:
@@ -309,10 +316,9 @@ class YaraProc(processor_t):
             # relocated address to something
             operand_ea = insn.ea+1+8*i
             if operand_ea in self.relocations and insn[i].type == o_imm:
-                print 'updated patch operand @', operand_ea
+                # print 'updated patch operand @', operand_ea
                 insn[i].type = o_mem
                 insn[i].addr = insn[i].value
-                # TODO: define structs etc
 
         return insn.size
 
